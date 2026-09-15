@@ -188,3 +188,92 @@ class Dashboard(models.Model):
 
     def __str__(self):
         return self.dashboard_name
+
+
+
+class ParameterMetaData(models.Model):
+    id = models.BigAutoField(primary_key=True)
+
+    global_code = models.CharField(
+        max_length=150,
+        unique=True
+    )
+
+    parameter_name = models.CharField(
+        max_length=255
+    )
+
+    parameter_description = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    uom = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True
+    )
+
+    minvalue = models.FloatField(
+        blank=True,
+        null=True
+    )
+
+    maxvalue = models.FloatField(
+        blank=True,
+        null=True
+    )
+
+    # AI / semantic metadata
+    
+    domain = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True
+    )
+
+    category = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True
+    )
+
+    process = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True
+    )
+
+    asset = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True
+    )
+
+    metric_type = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True
+    )
+
+    keywords = models.JSONField(
+        default=list,
+        blank=True
+    )
+
+    # ---------------------------------------
+
+    is_active = models.BooleanField(
+        default=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    def __str__(self):
+        return f"{self.global_code} - {self.parameter_name}"
