@@ -20,6 +20,8 @@ def generate_dashboard_from_request(
         user_request,
         generate_text,
     )
+    print("Intent: \n")
+    print(intent)
 
     # --------------------------------------------
     # STEP 2
@@ -48,6 +50,8 @@ def generate_dashboard_from_request(
         retrieval_query,
         top_k=25,
     )
+    print("candidates:\n")
+    print(candidates)
 
     # --------------------------------------------
     # STEP 4
@@ -60,6 +64,9 @@ def generate_dashboard_from_request(
             candidates,
         )
     )
+    print("selected parameters: \n")
+    print(selected_parameters)
+
 
     if not selected_parameters:
         raise ValueError(
@@ -76,6 +83,9 @@ def generate_dashboard_from_request(
         intent,
         selected_parameters,
     )
+
+    print("Dashboard plan:\n")
+    print(dashboard_plan)
 
     # --------------------------------------------
     # STEP 6

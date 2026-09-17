@@ -43,9 +43,14 @@ def build_component(
 
     if parameter:
 
-        global_code = parameter.get(
-            "global_code"
-        )
+        parameter_id = parameter.get("id")
+        global_code = parameter.get("global_code")
+
+        if not parameter_id:
+            raise ValueError(
+                f"Component {component_id} "
+                "has a parameter without database id."
+            )
 
         if not global_code:
             raise ValueError(
@@ -54,6 +59,7 @@ def build_component(
             )
 
         component["parameter"] = {
+            "id": parameter_id,
             "global_code": global_code
         }
 
@@ -67,10 +73,14 @@ def build_component(
 
         for parameter in parameters:
 
-            global_code = parameter.get(
-                "global_code"
-            )
+            parameter_id = parameter.get("id")
+            global_code = parameter.get("global_code")
 
+            if not parameter_id:
+                raise ValueError(
+                    f"Component {component_id} "
+                    "contains a parameter without database id."
+                )
             if not global_code:
                 raise ValueError(
                     f"Component {component_id} "
@@ -80,6 +90,7 @@ def build_component(
 
             parameter_list.append(
                 {
+                    "id": parameter_id,
                     "global_code": global_code
                 }
             )
@@ -232,6 +243,10 @@ def build_final_dashboard(plan):
 
     return {
         "dashboard": {
+            "title": dashboard_plan.get(
+            "title",
+            "General Dashboard"
+            ),
             "domain": dashboard_plan.get(
                 "domain",
                 "general"

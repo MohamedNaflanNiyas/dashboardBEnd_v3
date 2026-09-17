@@ -1,29 +1,67 @@
 import json
 import re
 
+def parse_json_response(response):
+    response = response.strip()
 
-def extract_json(text):
-    """
-    Extract the first JSON object from model output.
-    """
+    # Remove markdown code fences if the model adds them
+    response = re.sub(
+        r"^```(?:json)?\s*",
+        "",
+        response,
+        flags=re.IGNORECASE,
+    )
 
-    if not text:
-        raise ValueError("Empty model response.")
+    response = re.sub(
+        r"\s*```$",
+        "",
+        response,
+    )
 
-    text = text.strip()
+    # Convert Python-style booleans/null to JSON
+    response = re.sub(
+        r"\bTrue\b",
+        "true",
+        response,
+    )
 
-    if text.startswith("```"):
-        text = re.sub(r"^```(?:json)?", "", text)
-        text = re.sub(r"```$", "", text)
-        text = text.strip()
+    response = re.sub(
+        r"\bFalse\b",
+        "false",
+        response,
+    )
 
-    start = text.find("{")
-    end = text.rfind("}")
+    response = re.sub(
+        r"\bNone\b",
+        "null",
+        response,
+    )
 
-    if start == -1 or end == -1:
-        raise ValueError("No JSON object found in model response.")
+    return json.loads(response)
 
-    return text[start:end + 1]
+
+# def extract_json(text):
+#     """
+#     Extract the first JSON object from model output.
+#     """
+
+#     if not text:
+#         raise ValueError("Empty model response.")
+
+#     text = text.strip()
+
+#     if text.startswith("```"):
+#         text = re.sub(r"^```(?:json)?", "", text)
+#         text = re.sub(r"```$", "", text)
+#         text = text.strip()
+
+#     start = text.find("{")
+#     end = text.rfind("}")
+
+#     if start == -1 or end == -1:
+#         raise ValueError("No JSON object found in model response.")
+
+#     return text[start:end + 1]
 
 
 def extract_intent_from_model(user_request, generate_text):
@@ -75,28 +113,38 @@ User request:
 Return:
 
 {{
-    "domain": "...",
-    "scope": "...",
-    "intent": "...",
-    "concepts": [],
-    "trend": false,
-    "comparison": false,
-    "distribution": false,
-    "compliance": false,
-    "disclosure": false,
+    "title": "Cement Plant Emissions Dashboard",
+    "domain": "emissions",
+    "scope": "plant",
+    "intent": "dashboard",
+    "concepts": ["emission", "co2"],
+    "trend": False,
+    "comparison": False,
+    "distribution": False,
+    "disclosure": False,
+    "compliance": False,
     "time_range": "24h"
 }}
 """
 
     raw = generate_text(prompt)
 
-    data = json.loads(extract_json(raw))
+    print("\n")
+    print("=" * 80)
+    print("RAW QWEN INTENT RESPONSE")
+    print("=" * 80)
+    print(raw)
+    print("=" * 80)
+    print("\n")
+
+    data = parse_json_response(raw)
 
     return normalize_intent(data)
 
 
 def normalize_intent(intent):
     return {
+        "title": str(intent.get("title","General Dashboard")).strip(),
         "domain": str(intent.get("domain", "general")).lower().strip(),
         "scope": str(intent.get("scope", "unknown")).lower().strip(),
         "intent": str(intent.get("intent", "monitor")).lower().strip(),

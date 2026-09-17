@@ -20,6 +20,7 @@ def create_component(
             "purpose": purpose,
             "visualization": visualization,
             "parameter": {
+                "id": parameter["id"],
                 "global_code": parameter["global_code"],
                 "parameter_name": parameter.get(
                     "parameter_name",
@@ -33,6 +34,7 @@ def create_component(
         "visualization": visualization,
         "parameters": [
             {
+                "id": parameter["id"],
                 "global_code": parameter["global_code"],
                 "parameter_name": parameter.get(
                     "parameter_name",
@@ -151,6 +153,10 @@ def build_dashboard_plan(
 
     return {
         "dashboard": {
+            "title": intent.get(
+            "title",
+            "General Dashboard"
+            ),
             "domain": intent.get(
                 "domain",
                 "general",
