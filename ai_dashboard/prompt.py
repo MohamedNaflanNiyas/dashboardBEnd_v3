@@ -1,247 +1,33 @@
-# ai_dashboard/prompt.py
-
-
-import json
-
-
 def build_dashboard_prompt(
     user_request,
     intent,
-    parameters,
     dashboard_plan,
 ):
 
-    compact_parameters = []
-
-    for parameter in parameters:
-
-        compact_parameters.append({
-
-            "global_code": parameter[
-                "global_code"
-            ],
-
-            "parameter_name": parameter[
-                "parameter_name"
-            ],
-
-            "parameter_description": parameter[
-                "parameter_description"
-            ],
-
-            "uom": parameter.get(
-                "uom",
-                ""
-            ),
-
-            "minvalue": parameter.get(
-                "minvalue"
-            ),
-
-            "maxvalue": parameter.get(
-                "maxvalue"
-            ),
-
-            "inferred_scope": parameter.get(
-                "inferred_scope"
-            ),
-
-            "inferred_metric_type": parameter.get(
-                "inferred_metric_type"
-            ),
-
-            "inferred_domain": parameter.get(
-                "inferred_domain"
-            ),
-        })
-
     return f"""
-You are the SustainOS Dashboard JSON Generator.
+You are a JSON formatting engine for SustainOS.
 
-Your task is to convert a precomputed dashboard plan
-into valid JSON.
+The software has already selected the dashboard
+components and parameters.
 
-The dashboard plan has already determined:
+Convert the supplied dashboard plan into the
+required final JSON format.
 
-- relevant parameters
-- dashboard purpose
-- visualization types
-- parameter relationships
+IMPORTANT RULES:
 
-You MUST follow the dashboard plan.
+1. Do not add components.
+2. Do not remove components.
+3. Do not change parameters.
+4. Do not invent global codes.
+5. Use every global_code exactly as supplied.
+6. Do not generate runtime values.
+7. Do not generate timestamps.
+8. Do not generate layout information.
+9. Return JSON only.
+10. Do not include markdown.
+11. Do not include explanations.
 
-You are NOT responsible for discovering new parameters.
-
-You are NOT responsible for deciding arbitrary visualization types.
-
-You are a structured JSON formatter.
-
-==================================================
-USER REQUEST
-==================================================
-
-{user_request}
-
-==================================================
-INTENT
-==================================================
-
-{json.dumps(intent, indent=2)}
-
-==================================================
-AVAILABLE PARAMETERS
-==================================================
-
-{json.dumps(compact_parameters, indent=2)}
-
-==================================================
-DASHBOARD PLAN
-==================================================
-
-{json.dumps(dashboard_plan, indent=2)}
-
-==================================================
-OUTPUT RULES
-==================================================
-
-Return ONLY valid JSON.
-
-Do not return markdown.
-
-Do not return explanations.
-
-Do not return ```json.
-
-==================================================
-PARAMETER RULES
-==================================================
-
-Every parameter.global_code MUST be copied exactly
-from AVAILABLE PARAMETERS.
-
-NEVER invent a global_code.
-
-NEVER modify a global_code.
-
-NEVER add prefixes.
-
-For example:
-
-PLNT_WTR_FRESH
-
-must remain exactly:
-
-PLNT_WTR_FRESH
-
-Do NOT change it to:
-
-L1_PLNT_WTR_FRESH
-
-==================================================
-ID RULE
-==================================================
-
-Do NOT generate parameter IDs.
-
-The backend will resolve global_code to database ID.
-
-Therefore every parameter reference should initially contain:
-
-{{
-    "global_code": "EXACT_CODE_FROM_CATALOG"
-}}
-
-Do not include:
-
-"id"
-
-inside parameter references.
-
-==================================================
-UNIT RULE
-==================================================
-
-Do not invent units.
-
-The backend will enrich units from
-the parameter catalog.
-
-==================================================
-RUNTIME DATA RULE
-==================================================
-
-Never generate:
-
-value
-values
-timestamp
-timestamps
-data
-lastUpdated
-latestValue
-
-The backend supplies runtime data.
-
-==================================================
-LAYOUT RULE
-==================================================
-
-Never generate:
-
-x
-y
-width
-height
-layout
-grid
-position
-row
-column
-
-React owns physical dashboard layout.
-
-==================================================
-COMPONENT RULE
-==================================================
-
-Every component MUST contain either:
-
-"parameter"
-
-or:
-
-"dataSource"
-
-A component without a parameter reference is INVALID.
-
-==================================================
-SINGLE PARAMETER
-==================================================
-
-Use:
-
-"parameter": {{
-    "global_code": "..."
-}}
-
-==================================================
-MULTI PARAMETER
-==================================================
-
-Use:
-
-"dataSource": {{
-    "type": "parameters",
-    "parameters": [
-        {{
-            "global_code": "..."
-        }}
-    ]
-}}
-
-==================================================
-ALLOWED VISUALIZATIONS
-==================================================
+Allowed component types:
 
 kpi
 line_chart
@@ -253,66 +39,360 @@ progress
 status
 table
 
-==================================================
-CHART RULES
-==================================================
+Every component must contain:
 
-For line_chart:
+id
+type
+title
 
-Use:
+For one parameter use:
 
-"xAxis": {{
-    "field": "timestamp",
-    "label": "Time"
+"parameter": {{
+    "global_code": "EXACT_CODE"
 }}
 
-and:
-
-"parameter"
-
-for one parameter.
-
-For multiple related parameters use:
+For multiple parameters use:
 
 "dataSource": {{
     "type": "parameters",
-    "parameters": [...]
+    "parameters": [
+        {{
+            "global_code": "EXACT_CODE"
+        }}
+    ]
 }}
 
-Do not generate actual data.
-
-==================================================
-OUTPUT STRUCTURE
-==================================================
+FINAL JSON STRUCTURE:
 
 {{
     "dashboard": {{
-        "title": "...",
-        "subtitle": "...",
+        "domain": "string",
+        "scope": "string",
+        "intent": "string",
         "components": []
     }}
 }}
 
-The number and types of components MUST follow
-the DASHBOARD PLAN.
+DASHBOARD PLAN:
 
-Do not remove planned components unless the required
-parameter is not present in AVAILABLE PARAMETERS.
+{dashboard_plan}
 
-Do not create additional parameters.
-
-Before returning the JSON, verify:
-
-1. Every global_code exists in AVAILABLE PARAMETERS.
-2. Every component has a parameter or dataSource.
-3. No parameter ID was invented.
-4. No runtime data was generated.
-5. No layout fields were generated.
-6. Visualization types are allowed.
-7. Multi-parameter components use dataSource.
-8. Single-parameter components use parameter.
-9. The output is valid JSON.
+Return ONLY the JSON object.
 """
+
+
+# import json
+
+
+# def build_dashboard_prompt(
+#     user_request,
+#     intent,
+#     parameters,
+#     dashboard_plan,
+# ):
+
+#     compact_parameters = []
+
+#     for parameter in parameters:
+
+#         compact_parameters.append({
+
+#             "global_code": parameter[
+#                 "global_code"
+#             ],
+
+#             "parameter_name": parameter[
+#                 "parameter_name"
+#             ],
+
+#             "parameter_description": parameter[
+#                 "parameter_description"
+#             ],
+
+#             "uom": parameter.get(
+#                 "uom",
+#                 ""
+#             ),
+
+#             "minvalue": parameter.get(
+#                 "minvalue"
+#             ),
+
+#             "maxvalue": parameter.get(
+#                 "maxvalue"
+#             ),
+
+#             "inferred_scope": parameter.get(
+#                 "inferred_scope"
+#             ),
+
+#             "inferred_metric_type": parameter.get(
+#                 "inferred_metric_type"
+#             ),
+
+#             "inferred_domain": parameter.get(
+#                 "inferred_domain"
+#             ),
+#         })
+
+#     return f"""
+# You are the SustainOS Dashboard JSON Generator.
+
+# Your task is to convert a precomputed dashboard plan
+# into valid JSON.
+
+# The dashboard plan has already determined:
+
+# - relevant parameters
+# - dashboard purpose
+# - visualization types
+# - parameter relationships
+
+# You MUST follow the dashboard plan.
+
+# You are NOT responsible for discovering new parameters.
+
+# You are NOT responsible for deciding arbitrary visualization types.
+
+# You are a structured JSON formatter.
+
+# ==================================================
+# USER REQUEST
+# ==================================================
+
+# {user_request}
+
+# ==================================================
+# INTENT
+# ==================================================
+
+# {json.dumps(intent, indent=2)}
+
+# ==================================================
+# AVAILABLE PARAMETERS
+# ==================================================
+
+# {json.dumps(compact_parameters, indent=2)}
+
+# ==================================================
+# DASHBOARD PLAN
+# ==================================================
+
+# {json.dumps(dashboard_plan, indent=2)}
+
+# ==================================================
+# OUTPUT RULES
+# ==================================================
+
+# Return ONLY valid JSON.
+
+# Do not return markdown.
+
+# Do not return explanations.
+
+# Do not return ```json.
+
+# ==================================================
+# PARAMETER RULES
+# ==================================================
+
+# Every parameter.global_code MUST be copied exactly
+# from AVAILABLE PARAMETERS.
+
+# NEVER invent a global_code.
+
+# NEVER modify a global_code.
+
+# NEVER add prefixes.
+
+# For example:
+
+# PLNT_WTR_FRESH
+
+# must remain exactly:
+
+# PLNT_WTR_FRESH
+
+# Do NOT change it to:
+
+# L1_PLNT_WTR_FRESH
+
+# ==================================================
+# ID RULE
+# ==================================================
+
+# Do NOT generate parameter IDs.
+
+# The backend will resolve global_code to database ID.
+
+# Therefore every parameter reference should initially contain:
+
+# {{
+#     "global_code": "EXACT_CODE_FROM_CATALOG"
+# }}
+
+# Do not include:
+
+# "id"
+
+# inside parameter references.
+
+# ==================================================
+# UNIT RULE
+# ==================================================
+
+# Do not invent units.
+
+# The backend will enrich units from
+# the parameter catalog.
+
+# ==================================================
+# RUNTIME DATA RULE
+# ==================================================
+
+# Never generate:
+
+# value
+# values
+# timestamp
+# timestamps
+# data
+# lastUpdated
+# latestValue
+
+# The backend supplies runtime data.
+
+# ==================================================
+# LAYOUT RULE
+# ==================================================
+
+# Never generate:
+
+# x
+# y
+# width
+# height
+# layout
+# grid
+# position
+# row
+# column
+
+# React owns physical dashboard layout.
+
+# ==================================================
+# COMPONENT RULE
+# ==================================================
+
+# Every component MUST contain either:
+
+# "parameter"
+
+# or:
+
+# "dataSource"
+
+# A component without a parameter reference is INVALID.
+
+# ==================================================
+# SINGLE PARAMETER
+# ==================================================
+
+# Use:
+
+# "parameter": {{
+#     "global_code": "..."
+# }}
+
+# ==================================================
+# MULTI PARAMETER
+# ==================================================
+
+# Use:
+
+# "dataSource": {{
+#     "type": "parameters",
+#     "parameters": [
+#         {{
+#             "global_code": "..."
+#         }}
+#     ]
+# }}
+
+# ==================================================
+# ALLOWED VISUALIZATIONS
+# ==================================================
+
+# kpi
+# line_chart
+# bar_chart
+# pie_chart
+# area_chart
+# gauge
+# progress
+# status
+# table
+
+# ==================================================
+# CHART RULES
+# ==================================================
+
+# For line_chart:
+
+# Use:
+
+# "xAxis": {{
+#     "field": "timestamp",
+#     "label": "Time"
+# }}
+
+# and:
+
+# "parameter"
+
+# for one parameter.
+
+# For multiple related parameters use:
+
+# "dataSource": {{
+#     "type": "parameters",
+#     "parameters": [...]
+# }}
+
+# Do not generate actual data.
+
+# ==================================================
+# OUTPUT STRUCTURE
+# ==================================================
+
+# {{
+#     "dashboard": {{
+#         "title": "...",
+#         "subtitle": "...",
+#         "components": []
+#     }}
+# }}
+
+# The number and types of components MUST follow
+# the DASHBOARD PLAN.
+
+# Do not remove planned components unless the required
+# parameter is not present in AVAILABLE PARAMETERS.
+
+# Do not create additional parameters.
+
+# Before returning the JSON, verify:
+
+# 1. Every global_code exists in AVAILABLE PARAMETERS.
+# 2. Every component has a parameter or dataSource.
+# 3. No parameter ID was invented.
+# 4. No runtime data was generated.
+# 5. No layout fields were generated.
+# 6. Visualization types are allowed.
+# 7. Multi-parameter components use dataSource.
+# 8. Single-parameter components use parameter.
+# 9. The output is valid JSON.
+# """
 
 
 

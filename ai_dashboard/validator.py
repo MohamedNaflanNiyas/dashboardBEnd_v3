@@ -11,132 +11,70 @@ ALLOWED_TYPES = {
 }
 
 
-FORBIDDEN_FIELDS = {
-    "value",
-    "values",
-    "data",
-    "timestamps",
-    "timestamp",
-    "lastUpdated",
-    "latestValue",
-    "x",
-    "y",
-    "width",
-    "height",
-    "layout",
-    "grid",
-    "position",
-    "row",
-    "column",
-}
+def get_parameter_codes(dashboard):
 
+    codes = set()
 
-def normalize(text):
-
-    return (
-        (text or "")
-        .lower()
-        .replace("_", " ")
-        .replace("-", " ")
+    components = (
+        dashboard
+        .get("dashboard", {})
+        .get("components", [])
     )
 
+    for component in components:
 
-def token_set(text):
-
-    return set(
-        normalize(text).split()
-    )
-
-
-def semantic_title_matches(
-    component,
-    parameter,
-):
-
-    title = token_set(
-        component.get(
-            "title",
-            ""
-        )
-    )
-
-    name = token_set(
-        parameter.get(
-            "parameter_name",
-            ""
-        )
-    )
-
-    description = token_set(
-        parameter.get(
-            "parameter_description",
-            ""
-        )
-    )
-
-    reference = (
-        name | description
-    )
-
-    if not title:
-        return True
-
-    overlap = (
-        title & reference
-    )
-
-    # Don't reject very short titles.
-    if len(title) <= 2:
-        return True
-
-    return len(overlap) >= 1
-
-
-def validate_parameter(
-    parameter,
-    parameter_by_code,
-    component_id,
-):
-
-    if not isinstance(
-        parameter,
-        dict
-    ):
-        return (
-            False,
-            f"{component_id}: parameter must be object."
+        parameter = component.get(
+            "parameter"
         )
 
-    code = parameter.get(
-        "global_code"
-    )
+        if isinstance(parameter, dict):
 
-    if not code:
-        return (
-            False,
-            f"{component_id}: missing global_code."
+            code = parameter.get(
+                "global_code"
+            )
+
+            if code:
+                codes.add(code)
+
+        data_source = component.get(
+            "dataSource"
         )
 
-    if code not in parameter_by_code:
-        return (
-            False,
-            f"{component_id}: unknown global_code {code}."
-        )
+        if isinstance(data_source, dict):
 
-    return True, ""
+            if data_source.get("type") == "parameters":
+
+                for parameter in data_source.get(
+                    "parameters",
+                    []
+                ):
+
+                    if isinstance(
+                        parameter,
+                        dict
+                    ):
+
+                        code = parameter.get(
+                            "global_code"
+                        )
+
+                        if code:
+                            codes.add(code)
+
+    return codes
 
 
 def validate_dashboard(
     dashboard,
-    parameters,
+    allowed_parameters
 ):
 
     if not isinstance(
         dashboard,
         dict
     ):
-        return False, (
-            "Dashboard output must be an object."
+        raise ValueError(
+            "Dashboard must be an object."
         )
 
     dashboard_data = dashboard.get(
@@ -147,42 +85,38 @@ def validate_dashboard(
         dashboard_data,
         dict
     ):
-        return False, (
+        raise ValueError(
             "Missing dashboard object."
         )
 
-    parameter_by_code = {
-        parameter["global_code"]: parameter
-        for parameter in parameters
-    }
-
     components = dashboard_data.get(
-        "components",
-        []
+        "components"
     )
 
     if not isinstance(
         components,
         list
     ):
-        return False, (
-            "dashboard.components must be a list."
+        raise ValueError(
+            "components must be a list."
         )
 
-    for component in components:
+    allowed_codes = {
+        parameter["global_code"]
+        for parameter in allowed_parameters
+    }
+
+    for index, component in enumerate(
+        components
+    ):
 
         if not isinstance(
             component,
             dict
         ):
-            return False, (
-                "Every component must be an object."
+            raise ValueError(
+                f"Component {index} must be an object."
             )
-
-        component_id = component.get(
-            "id",
-            "unknown"
-        )
 
         component_type = component.get(
             "type"
@@ -190,180 +124,435 @@ def validate_dashboard(
 
         if component_type not in ALLOWED_TYPES:
 
-            return False, (
-                f"{component_id}: "
-                f"invalid visualization type "
-                f"{component_type}."
+            raise ValueError(
+                f"Component {index} has invalid "
+                f"visualization type: "
+                f"{component_type}"
             )
 
-        # ---------------------------
-        # Forbidden fields
-        # ---------------------------
+        codes = []
 
-        for field in FORBIDDEN_FIELDS:
-
-            if field in component:
-
-                return False, (
-                    f"{component_id}: "
-                    f"forbidden field '{field}'."
-                )
-
-        # ---------------------------
-        # Parameter presence
-        # ---------------------------
-
-        has_parameter = (
-            "parameter" in component
+        parameter = component.get(
+            "parameter"
         )
 
-        has_data_source = (
-            "dataSource" in component
-        )
-
-        if (
-            not has_parameter
-            and not has_data_source
+        if isinstance(
+            parameter,
+            dict
         ):
 
-            return False, (
-                f"{component_id}: "
-                "component must contain "
-                "parameter or dataSource."
+            code = parameter.get(
+                "global_code"
             )
 
-        # ---------------------------
-        # Single parameter
-        # ---------------------------
+            if code:
+                codes.append(code)
 
-        if has_parameter:
+        data_source = component.get(
+            "dataSource"
+        )
 
-            valid, message = (
-                validate_parameter(
-                    component["parameter"],
-                    parameter_by_code,
-                    component_id,
-                )
-            )
+        if isinstance(
+            data_source,
+            dict
+        ):
 
-            if not valid:
-                return False, message
-
-            code = component[
-                "parameter"
-            ]["global_code"]
-
-            parameter = (
-                parameter_by_code[code]
-            )
-
-            if not semantic_title_matches(
-                component,
-                parameter,
+            for parameter in data_source.get(
+                "parameters",
+                []
             ):
 
-                return False, (
-                    f"{component_id}: "
-                    f"title does not appear "
-                    f"semantically compatible "
-                    f"with parameter {code}."
-                )
-
-        # ---------------------------
-        # Multi parameter
-        # ---------------------------
-
-        if has_data_source:
-
-            data_source = component[
-                "dataSource"
-            ]
-
-            if not isinstance(
-                data_source,
-                dict
-            ):
-                return False, (
-                    f"{component_id}: "
-                    "dataSource must be object."
-                )
-
-            if data_source.get(
-                "type"
-            ) != "parameters":
-
-                return False, (
-                    f"{component_id}: "
-                    "dataSource.type must "
-                    "be 'parameters'."
-                )
-
-            parameter_list = (
-                data_source.get(
-                    "parameters"
-                )
-            )
-
-            if not isinstance(
-                parameter_list,
-                list
-            ):
-                return False, (
-                    f"{component_id}: "
-                    "dataSource.parameters "
-                    "must be list."
-                )
-
-            if len(parameter_list) < 2:
-
-                return False, (
-                    f"{component_id}: "
-                    "dataSource should contain "
-                    "at least two parameters."
-                )
-
-            seen_codes = set()
-
-            for parameter_ref in parameter_list:
-
-                valid, message = (
-                    validate_parameter(
-                        parameter_ref,
-                        parameter_by_code,
-                        component_id,
-                    )
-                )
-
-                if not valid:
-                    return False, message
-
-                code = parameter_ref[
+                code = parameter.get(
                     "global_code"
-                ]
+                )
 
-                if code in seen_codes:
+                if code:
+                    codes.append(code)
 
-                    return False, (
-                        f"{component_id}: "
-                        f"duplicate parameter {code}."
-                    )
+        for code in codes:
 
-                seen_codes.add(code)
+            if code not in allowed_codes:
 
-        # A component should not contain both
-        # forms in this architecture.
-        if (
-            has_parameter
-            and has_data_source
-        ):
+                raise ValueError(
+                    f"Unknown global_code: {code}"
+                )
 
-            return False, (
-                f"{component_id}: "
-                "use either parameter or "
-                "dataSource, not both."
-            )
+    return True
 
-    return True, "Valid dashboard."
+
+
+
+
+
+
+
+
+# ALLOWED_TYPES = {
+#     "kpi",
+#     "line_chart",
+#     "bar_chart",
+#     "pie_chart",
+#     "area_chart",
+#     "gauge",
+#     "progress",
+#     "status",
+#     "table",
+# }
+
+
+# FORBIDDEN_FIELDS = {
+#     "value",
+#     "values",
+#     "data",
+#     "timestamps",
+#     "timestamp",
+#     "lastUpdated",
+#     "latestValue",
+#     "x",
+#     "y",
+#     "width",
+#     "height",
+#     "layout",
+#     "grid",
+#     "position",
+#     "row",
+#     "column",
+# }
+
+
+# def normalize(text):
+
+#     return (
+#         (text or "")
+#         .lower()
+#         .replace("_", " ")
+#         .replace("-", " ")
+#     )
+
+
+# def token_set(text):
+
+#     return set(
+#         normalize(text).split()
+#     )
+
+
+# def semantic_title_matches(
+#     component,
+#     parameter,
+# ):
+
+#     title = token_set(
+#         component.get(
+#             "title",
+#             ""
+#         )
+#     )
+
+#     name = token_set(
+#         parameter.get(
+#             "parameter_name",
+#             ""
+#         )
+#     )
+
+#     description = token_set(
+#         parameter.get(
+#             "parameter_description",
+#             ""
+#         )
+#     )
+
+#     reference = (
+#         name | description
+#     )
+
+#     if not title:
+#         return True
+
+#     overlap = (
+#         title & reference
+#     )
+
+#     # Don't reject very short titles.
+#     if len(title) <= 2:
+#         return True
+
+#     return len(overlap) >= 1
+
+
+# def validate_parameter(
+#     parameter,
+#     parameter_by_code,
+#     component_id,
+# ):
+
+#     if not isinstance(
+#         parameter,
+#         dict
+#     ):
+#         return (
+#             False,
+#             f"{component_id}: parameter must be object."
+#         )
+
+#     code = parameter.get(
+#         "global_code"
+#     )
+
+#     if not code:
+#         return (
+#             False,
+#             f"{component_id}: missing global_code."
+#         )
+
+#     if code not in parameter_by_code:
+#         return (
+#             False,
+#             f"{component_id}: unknown global_code {code}."
+#         )
+
+#     return True, ""
+
+
+# def validate_dashboard(
+#     dashboard,
+#     parameters,
+# ):
+
+#     if not isinstance(
+#         dashboard,
+#         dict
+#     ):
+#         return False, (
+#             "Dashboard output must be an object."
+#         )
+
+#     dashboard_data = dashboard.get(
+#         "dashboard"
+#     )
+
+#     if not isinstance(
+#         dashboard_data,
+#         dict
+#     ):
+#         return False, (
+#             "Missing dashboard object."
+#         )
+
+#     parameter_by_code = {
+#         parameter["global_code"]: parameter
+#         for parameter in parameters
+#     }
+
+#     components = dashboard_data.get(
+#         "components",
+#         []
+#     )
+
+#     if not isinstance(
+#         components,
+#         list
+#     ):
+#         return False, (
+#             "dashboard.components must be a list."
+#         )
+
+#     for component in components:
+
+#         if not isinstance(
+#             component,
+#             dict
+#         ):
+#             return False, (
+#                 "Every component must be an object."
+#             )
+
+#         component_id = component.get(
+#             "id",
+#             "unknown"
+#         )
+
+#         component_type = component.get(
+#             "type"
+#         )
+
+#         if component_type not in ALLOWED_TYPES:
+
+#             return False, (
+#                 f"{component_id}: "
+#                 f"invalid visualization type "
+#                 f"{component_type}."
+#             )
+
+#         # ---------------------------
+#         # Forbidden fields
+#         # ---------------------------
+
+#         for field in FORBIDDEN_FIELDS:
+
+#             if field in component:
+
+#                 return False, (
+#                     f"{component_id}: "
+#                     f"forbidden field '{field}'."
+#                 )
+
+#         # ---------------------------
+#         # Parameter presence
+#         # ---------------------------
+
+#         has_parameter = (
+#             "parameter" in component
+#         )
+
+#         has_data_source = (
+#             "dataSource" in component
+#         )
+
+#         if (
+#             not has_parameter
+#             and not has_data_source
+#         ):
+
+#             return False, (
+#                 f"{component_id}: "
+#                 "component must contain "
+#                 "parameter or dataSource."
+#             )
+
+#         # ---------------------------
+#         # Single parameter
+#         # ---------------------------
+
+#         if has_parameter:
+
+#             valid, message = (
+#                 validate_parameter(
+#                     component["parameter"],
+#                     parameter_by_code,
+#                     component_id,
+#                 )
+#             )
+
+#             if not valid:
+#                 return False, message
+
+#             code = component[
+#                 "parameter"
+#             ]["global_code"]
+
+#             parameter = (
+#                 parameter_by_code[code]
+#             )
+
+#             if not semantic_title_matches(
+#                 component,
+#                 parameter,
+#             ):
+
+#                 return False, (
+#                     f"{component_id}: "
+#                     f"title does not appear "
+#                     f"semantically compatible "
+#                     f"with parameter {code}."
+#                 )
+
+#         # ---------------------------
+#         # Multi parameter
+#         # ---------------------------
+
+#         if has_data_source:
+
+#             data_source = component[
+#                 "dataSource"
+#             ]
+
+#             if not isinstance(
+#                 data_source,
+#                 dict
+#             ):
+#                 return False, (
+#                     f"{component_id}: "
+#                     "dataSource must be object."
+#                 )
+
+#             if data_source.get(
+#                 "type"
+#             ) != "parameters":
+
+#                 return False, (
+#                     f"{component_id}: "
+#                     "dataSource.type must "
+#                     "be 'parameters'."
+#                 )
+
+#             parameter_list = (
+#                 data_source.get(
+#                     "parameters"
+#                 )
+#             )
+
+#             if not isinstance(
+#                 parameter_list,
+#                 list
+#             ):
+#                 return False, (
+#                     f"{component_id}: "
+#                     "dataSource.parameters "
+#                     "must be list."
+#                 )
+
+#             if len(parameter_list) < 2:
+
+#                 return False, (
+#                     f"{component_id}: "
+#                     "dataSource should contain "
+#                     "at least two parameters."
+#                 )
+
+#             seen_codes = set()
+
+#             for parameter_ref in parameter_list:
+
+#                 valid, message = (
+#                     validate_parameter(
+#                         parameter_ref,
+#                         parameter_by_code,
+#                         component_id,
+#                     )
+#                 )
+
+#                 if not valid:
+#                     return False, message
+
+#                 code = parameter_ref[
+#                     "global_code"
+#                 ]
+
+#                 if code in seen_codes:
+
+#                     return False, (
+#                         f"{component_id}: "
+#                         f"duplicate parameter {code}."
+#                     )
+
+#                 seen_codes.add(code)
+
+#         # A component should not contain both
+#         # forms in this architecture.
+#         if (
+#             has_parameter
+#             and has_data_source
+#         ):
+
+#             return False, (
+#                 f"{component_id}: "
+#                 "use either parameter or "
+#                 "dataSource, not both."
+#             )
+
+#     return True, "Valid dashboard."
 
 
 

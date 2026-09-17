@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+import traceback
 
 from core.models import (
     Dashboard,
@@ -95,12 +96,9 @@ class GenerateDashboardView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        except Exception as error:
-
-            print(
-                "Dashboard generation error:",
-                error
-            )
+        except Exception as e:
+            print("Dashboard generation error:", e)
+            traceback.print_exc()
 
             return Response(
                 {

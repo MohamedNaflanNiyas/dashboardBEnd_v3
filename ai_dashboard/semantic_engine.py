@@ -1,271 +1,163 @@
-import re
+from .knowledge.concepts import CONCEPT_ALIASES
 
 
-def normalize(text):
-    return re.sub(
-        r"[^a-z0-9%]+",
-        " ",
-        (text or "").lower()
-    ).strip()
+def normalize(value):
+    if value is None:
+        return ""
+
+    return str(value).lower().strip()
 
 
-def infer_scope(parameter):
+def parameter_text(parameter):
 
-    code = (
-        parameter.get("global_code")
-        or ""
-    ).upper()
-
-    name = normalize(
-        parameter.get("parameter_name", "")
-    )
-
-    description = normalize(
-        parameter.get("parameter_description", "")
-    )
-
-    combined = (
-        f"{code} {name} {description}"
-    )
-
-    if (
-        code.startswith("PLNT_")
-        or code.startswith("PLT_")
-        or code.startswith("SCP1_")
-        or "plant" in combined
-    ):
-        return "plant"
-
-    if (
-        code.startswith("L1_")
-        or "line 1" in combined
-    ):
-        return "line_1"
-
-    if (
-        code.startswith("L2_")
-        or "line 2" in combined
-    ):
-        return "line_2"
-
-    return "unknown"
-
-
-def infer_metric_type(parameter):
-
-    code = normalize(
-        parameter.get("global_code", "")
-    )
-
-    name = normalize(
-        parameter.get("parameter_name", "")
-    )
-
-    description = normalize(
-        parameter.get("parameter_description", "")
-    )
-
-    metric = normalize(
-        parameter.get("metric_type", "")
-    )
-
-    text = " ".join([
-        code,
-        name,
-        description,
-        metric,
-    ])
-
-    if any(
-        word in text
-        for word in [
-            "compliance",
-            "exceedance",
-        ]
-    ):
-        return "compliance"
-
-    if any(
-        word in text
-        for word in [
-            "rate",
-            "ratio",
-            "percentage",
-            "percent",
-            "mix",
-            "share",
-        ]
-    ):
-        return "rate"
-
-    if any(
-        word in text
-        for word in [
-            "intensity",
-            "specific",
-            "per tonne",
-            "per ton",
-        ]
-    ):
-        return "intensity"
-
-    if any(
-        word in text
-        for word in [
-            "emission",
-            "emissions",
-        ]
-    ):
-        return "emission"
-
-    if any(
-        word in text
-        for word in [
-            "production",
-            "output",
-        ]
-    ):
-        return "production"
-
-    if any(
-        word in text
-        for word in [
-            "flow",
-            "feed",
-            "consumption",
-        ]
-    ):
-        return "consumption"
-
-    if any(
-        word in text
-        for word in [
-            "concentration",
-        ]
-    ):
-        return "concentration"
-
-    if any(
-        word in text
-        for word in [
-            "power",
-            "energy",
-        ]
-    ):
-        return "energy"
-
-    if any(
-        word in text
-        for word in [
-            "duration",
-        ]
-    ):
-        return "duration"
-
-    return "numeric"
-
-
-def infer_domain(parameter):
-
-    explicit = (
-        parameter.get("domain")
-        or ""
-    ).strip().lower()
-
-    if explicit:
-        return explicit
-
-    text = " ".join([
-        parameter.get("global_code", ""),
+    values = [
         parameter.get("parameter_name", ""),
         parameter.get("parameter_description", ""),
-    ])
+        parameter.get("domain", ""),
+        parameter.get("category", ""),
+        parameter.get("process", ""),
+        parameter.get("asset", ""),
+        parameter.get("metric_type", ""),
+    ]
 
-    text = normalize(text)
+    values.extend(
+        parameter.get("keywords", [])
+    )
 
-    domain_terms = {
+    return normalize(" ".join(
+        str(value)
+        for value in values
+        if value
+    ))
 
-        "water": [
-            "water",
-            "fresh water",
-            "reuse",
-            "abstraction",
-            "discharge",
-        ],
 
-        "emissions": [
-            "emission",
-            "co2",
-            "ghg",
-            "nox",
-            "so2",
-            "particulate",
-            "pm",
-        ],
+def concept_matches(parameter, concept):
 
-        "energy": [
-            "energy",
-            "power",
-            "electricity",
-            "fuel",
-            "coal",
-            "gas",
-            "oil",
-        ],
+    aliases = CONCEPT_ALIASES.get(
+        concept,
+        [concept]
+    )
 
-        "production": [
-            "production",
-            "clinker",
-            "cement",
-            "output",
-        ],
-    }
+    text = parameter_text(parameter)
 
-    scores = {}
+    for alias in aliases:
 
-    for domain, terms in domain_terms.items():
+        if normalize(alias) in text:
+            return True
 
-        score = sum(
-            1
-            for term in terms
-            if term in text
+    return False
+
+
+def domain_matches(parameter, domain):
+
+    parameter_domain = normalize(
+        parameter.get("domain")
+    )
+
+    if not parameter_domain:
+        return True
+
+    return (
+        parameter_domain == normalize(domain)
+    )
+
+
+def score_parameter(parameter, intent):
+
+    score = 0
+
+    domain = intent.get("domain", "")
+
+    if domain_matches(parameter, domain):
+        score += 5
+
+    for concept in intent.get("concepts", []):
+
+        if concept_matches(parameter, concept):
+            score += 3
+
+    metric_type = normalize(
+        parameter.get("metric_type")
+    )
+
+    if intent.get("trend") and metric_type:
+        score += 1
+
+    return score
+
+
+def select_relevant_parameters(
+    intent,
+    candidates,
+    minimum_score=3
+):
+
+    selected = []
+
+    for parameter in candidates:
+
+        score = score_parameter(
+            parameter,
+            intent
         )
 
-        scores[domain] = score
+        if score >= minimum_score:
 
-    best = max(
-        scores,
-        key=scores.get
+            item = dict(parameter)
+
+            item["semantic_score"] = score
+
+            selected.append(item)
+
+    selected.sort(
+        key=lambda item: item["semantic_score"],
+        reverse=True
     )
 
-    if scores[best] == 0:
-        return "unknown"
-
-    return best
+    return selected
 
 
-def enrich_parameter(parameter):
+def detect_semantic_group(parameter):
 
-    enriched = dict(parameter)
+    text = parameter_text(parameter)
 
-    enriched["inferred_scope"] = infer_scope(
-        parameter
+    category = normalize(
+        parameter.get("category")
     )
 
-    enriched["inferred_metric_type"] = infer_metric_type(
-        parameter
+    metric_type = normalize(
+        parameter.get("metric_type")
     )
 
-    enriched["inferred_domain"] = infer_domain(
-        parameter
-    )
+    combined = " ".join([
+        text,
+        category,
+        metric_type,
+    ])
 
-    return enriched
+    if any(
+        word in combined
+        for word in [
+            "nox",
+            "nitrogen oxide",
+            "so2",
+            "sulfur dioxide",
+            "pm emission",
+            "particulate",
+        ]
+    ):
+        return "air_emissions"
 
+    if "co2" in combined:
+        return "co2_emissions"
 
-def enrich_parameters(parameters):
+    if "ghg" in combined:
+        return "ghg_emissions"
 
-    return [
-        enrich_parameter(parameter)
-        for parameter in parameters
-    ]
+    if "water" in combined:
+        return "water"
+
+    if "energy" in combined:
+        return "energy"
+
+    return None

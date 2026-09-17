@@ -1,97 +1,112 @@
-def compatible_units(parameters):
-    units = {
-        (p.get("uom") or "").strip().lower()
-        for p in parameters
-    }
+def normalize(value):
+    if value is None:
+        return ""
 
-    units.discard("")
-
-    return len(units) <= 1
+    return str(value).lower().strip()
 
 
-def choose_single_metric_visualization(
-    parameter,
-    intent,
-):
+def is_percentage(parameter):
 
-    metric_type = parameter.get(
-        "inferred_metric_type"
+    uom = normalize(parameter.get("uom"))
+
+    name = normalize(
+        parameter.get("parameter_name")
     )
 
-    if intent.get("trend"):
-        return "line_chart"
+    return (
+        "%"
+        in uom
+        or "rate"
+        in name
+        or "percentage"
+        in name
+        or "percent"
+        in name
+    )
 
-    if metric_type == "rate":
+
+def is_intensity(parameter):
+
+    metric_type = normalize(
+        parameter.get("metric_type")
+    )
+
+    name = normalize(
+        parameter.get("parameter_name")
+    )
+
+    return (
+        metric_type == "intensity"
+        or "intensity" in name
+        or "specific" in name
+    )
+
+
+def is_compliance(parameter):
+
+    name = normalize(
+        parameter.get("parameter_name")
+    )
+
+    category = normalize(
+        parameter.get("category")
+    )
+
+    metric_type = normalize(
+        parameter.get("metric_type")
+    )
+
+    text = " ".join([
+        name,
+        category,
+        metric_type,
+    ])
+
+    return (
+        "compliance" in text
+        or "exceedance" in text
+    )
+
+
+def choose_single_visualization(
+    parameter,
+    intent
+):
+
+    if is_compliance(parameter):
         return "progress"
 
-    if metric_type == "compliance":
+    if is_percentage(parameter):
         return "progress"
 
-    if metric_type == "intensity":
-        return "gauge"
-
-    if metric_type == "concentration":
+    if is_intensity(parameter):
         return "gauge"
 
     return "kpi"
 
 
-def choose_multi_metric_visualization(
+def choose_group_visualization(
     parameters,
-    intent,
+    group_type,
+    intent
 ):
 
-    if intent.get("trend"):
-
-        if compatible_units(parameters):
-            return "line_chart"
-
+    if group_type == "trend":
         return "line_chart"
 
-    if intent.get("distribution"):
-
-        if len(parameters) <= 6:
-            return "pie_chart"
-
+    if group_type == "comparison":
         return "bar_chart"
 
-    if intent.get("comparison"):
+    if group_type == "distribution":
+        return "pie_chart"
 
+    if group_type == "compliance":
+        return "progress"
+
+    if len(parameters) > 1:
         return "bar_chart"
 
-    if compatible_units(parameters):
-
-        return "line_chart"
-
-    return "bar_chart"
-
-
-def can_make_trend(parameters):
-
-    return len(parameters) >= 1
-
-
-def can_make_comparison(parameters):
-
-    if len(parameters) < 2:
-        return False
-
-    metric_types = {
-        p.get("inferred_metric_type")
-        for p in parameters
-    }
-
-    # Don't compare fundamentally different
-    # measurements unless explicitly requested.
-    if len(metric_types) > 1:
-        return False
-
-    return True
-
-
-def can_make_distribution(parameters):
-
-    if not parameters:
-        return False
-
-    return len(parameters) <= 6
+    return choose_single_visualization(
+        parameters[0],
+        intent
+    )
