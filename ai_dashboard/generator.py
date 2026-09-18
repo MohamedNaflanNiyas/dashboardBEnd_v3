@@ -5,12 +5,12 @@ _MODEL = None
 _TOKENIZER = None
 _DEVICE = None
 
-
+# function to resuse model rather calling model again and again 
 def get_model():
 
     global _MODEL
     global _TOKENIZER
-    global _DEVICE
+    global _DEVICE 
 
     if (
         _MODEL is None
@@ -41,6 +41,7 @@ def generate_text(prompt):
         }
     ]
 
+    # To format the prompt for Qwen's instruction/chat format.
     inputs = tokenizer.apply_chat_template(
         messages,
         add_generation_prompt=True,
@@ -53,18 +54,16 @@ def generate_text(prompt):
         key: value.to(device)
         for key, value in inputs.items()
     }
-
+    
+    # Generate the output
     outputs = model.generate(
         **inputs,
         max_new_tokens=1500,
         do_sample=False,
     )
 
-    generated_tokens = outputs[
-        0
-    ][
-        inputs["input_ids"].shape[-1]:
-    ]
+    generated_tokens = outputs[0][inputs["input_ids"].shape[-1]:]
+    print(f"Generated Tokens : {generated_tokens}")
 
     response = tokenizer.decode(
         generated_tokens,

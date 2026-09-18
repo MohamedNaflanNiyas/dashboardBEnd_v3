@@ -181,7 +181,7 @@ class ParameterValue(models.Model):
     )
 
     parameter = models.ForeignKey(
-        Parameter,
+        ParameterMetaData,
         on_delete=models.CASCADE,
         related_name="values"
     )

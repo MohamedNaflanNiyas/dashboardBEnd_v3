@@ -1,3 +1,8 @@
+
+"""
+Its load: Tokenizer + Qwen model + MPS device
+"""
+
 import torch
 from transformers import (
     AutoTokenizer,

@@ -40,30 +40,6 @@ def parse_json_response(response):
     return json.loads(response)
 
 
-# def extract_json(text):
-#     """
-#     Extract the first JSON object from model output.
-#     """
-
-#     if not text:
-#         raise ValueError("Empty model response.")
-
-#     text = text.strip()
-
-#     if text.startswith("```"):
-#         text = re.sub(r"^```(?:json)?", "", text)
-#         text = re.sub(r"```$", "", text)
-#         text = text.strip()
-
-#     start = text.find("{")
-#     end = text.rfind("}")
-
-#     if start == -1 or end == -1:
-#         raise ValueError("No JSON object found in model response.")
-
-#     return text[start:end + 1]
-
-
 def extract_intent_from_model(user_request, generate_text):
     prompt = f"""
 You are an intent understanding engine for an industrial
