@@ -7,15 +7,9 @@ from .validator import validate_dashboard
 from .generator import generate_text
 
 
-def generate_dashboard_from_request(
-    user_request
-):
+def generate_dashboard_from_request(user_request):
 
-    # --------------------------------------------
-    # STEP 1
-    # Understand user request
-    # --------------------------------------------
-
+    # STEP 1: Understand user request
     intent = extract_intent_from_model(
         user_request,
         generate_text,
@@ -23,11 +17,7 @@ def generate_dashboard_from_request(
     print("Intent: \n")
     print(intent)
 
-    # --------------------------------------------
-    # STEP 2
-    # Build retrieval query
-    # --------------------------------------------
-
+    # STEP 2: Build retrieval query
     retrieval_query = " ".join(
         [
             user_request,
@@ -41,30 +31,24 @@ def generate_dashboard_from_request(
         ]
     )
 
-    # --------------------------------------------
-    # STEP 3
-    # Retrieve candidates
-    # --------------------------------------------
-
+    
+    # STEP 3:Retrieve candidates
     candidates = retrieve_parameters(
         retrieval_query,
-        top_k=25,
+        top_k=10,
     )
-    print("candidates:\n")
-    print(candidates)
+    print("\ncandidates:\n")
+    print(f"\n {candidates}\n")
 
-    # --------------------------------------------
-    # STEP 4
-    # Semantic selection
-    # --------------------------------------------
-
+    
+    # STEP 4: Semantic selection
     selected_parameters = (
         select_relevant_parameters(
             intent,
             candidates,
         )
     )
-    print("selected parameters: \n")
+    print("\nselected parameters: Sementic Search \n")
     print(selected_parameters)
 
 
@@ -74,24 +58,16 @@ def generate_dashboard_from_request(
             "for the requested dashboard."
         )
 
-    # --------------------------------------------
-    # STEP 5
-    # Build dashboard plan
-    # --------------------------------------------
-
+    # STEP 5: Build dashboard plan
     dashboard_plan = build_dashboard_plan(
         intent,
         selected_parameters,
     )
 
-    print("Dashboard plan:\n")
+    print("\n======Dashboard plan: ============\n")
     print(dashboard_plan)
 
-    # --------------------------------------------
-    # STEP 6
-    # Build final JSON
-    # --------------------------------------------
-
+    #STEP 6: Build final JSON
     dashboard = build_final_dashboard(
         dashboard_plan
     )
@@ -110,11 +86,7 @@ def generate_dashboard_from_request(
     print("=" * 80)
     print("\n")
 
-    # --------------------------------------------
-    # STEP 7
-    # Validate
-    # --------------------------------------------
-
+    # STEP 7: Validate
     validate_dashboard(
         dashboard,
         selected_parameters,

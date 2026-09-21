@@ -1,3 +1,5 @@
+# to decide What type of chart should represent a parameter
+
 def normalize(value):
     if value is None:
         return ""

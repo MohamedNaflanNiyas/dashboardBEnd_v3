@@ -1,3 +1,4 @@
+# To understand domain terminology
 DOMAIN_KEYWORDS = {
     "emissions": [
         "emission",

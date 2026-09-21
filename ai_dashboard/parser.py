@@ -9,15 +9,9 @@ def parse_json_response(text):
             "AI returned an empty response."
         )
 
-    print("\n")
-    print("=" * 80)
-    print("========== RAW QWEN RESPONSE ==========")
-    print("=" * 80)
+    print(f"\n{'=' * 80}\n ========== RAW QWEN RESPONSE ==========\n")
     print(text)
-    print("=" * 80)
-    print("========== END RAW QWEN RESPONSE ======")
-    print("=" * 80)
-    print("\n")
+    print(f"\n{'=' * 80}\n ========== END RAW QWEN RESPONSE ==========\n")
 
     text = text.strip()
 
@@ -60,11 +54,8 @@ def parse_json_response(text):
 
     except json.JSONDecodeError as exc:
 
-        print("\n")
-        print("=" * 80)
-        print("========== JSON PARSE ERROR ==========")
-        print("=" * 80)
-
+        print(f"\n{'=' * 80}\n========== JSON PARSE ERROR ==========\n{'=' * 80}\n")
+        
         print(
             f"Error: {exc}"
         )

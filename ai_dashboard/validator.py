@@ -23,22 +23,16 @@ def get_parameter_codes(dashboard):
 
     for component in components:
 
-        parameter = component.get(
-            "parameter"
-        )
+        parameter = component.get("parameter")
 
         if isinstance(parameter, dict):
 
-            code = parameter.get(
-                "global_code"
-            )
+            code = parameter.get("global_code")
 
             if code:
                 codes.add(code)
 
-        data_source = component.get(
-            "dataSource"
-        )
+        data_source = component.get("dataSource")
 
         if isinstance(data_source, dict):
 
@@ -54,9 +48,7 @@ def get_parameter_codes(dashboard):
                         dict
                     ):
 
-                        code = parameter.get(
-                            "global_code"
-                        )
+                        code = parameter.get("global_code")
 
                         if code:
                             codes.add(code)

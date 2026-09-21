@@ -1,6 +1,5 @@
 from .knowledge.concepts import CONCEPT_ALIASES
 
-
 def normalize(value):
     if value is None:
         return ""
@@ -89,7 +88,7 @@ def score_parameter(parameter, intent):
 def select_relevant_parameters(
     intent,
     candidates,
-    minimum_score=3
+    minimum_score=8
 ):
 
     selected = []
@@ -110,7 +109,7 @@ def select_relevant_parameters(
             selected.append(item)
 
     selected.sort(
-        key=lambda item: item["semantic_score"],
+        key=lambda item: item["semantic_score"], 
         reverse=True
     )
 

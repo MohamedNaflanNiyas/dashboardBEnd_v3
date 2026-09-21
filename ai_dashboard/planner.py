@@ -1,3 +1,5 @@
+# This is decide What dashboard components should exist
+
 def choose_visualization(
     intent,
     parameters,
@@ -28,9 +30,7 @@ def choose_visualization(
         "monitor"
     )
 
-    # ---------------------------------------------------------
-    # Trend
-    # ---------------------------------------------------------
+   # Trend
 
     if trend:
 
@@ -42,9 +42,7 @@ def choose_visualization(
             )
         }
 
-    # ---------------------------------------------------------
     # Distribution / composition
-    # ---------------------------------------------------------
 
     if distribution:
 
@@ -65,10 +63,8 @@ def choose_visualization(
                 "with several categories."
             )
         }
-
-    # ---------------------------------------------------------
+    
     # Comparison
-    # ---------------------------------------------------------
 
     if comparison:
 
@@ -80,9 +76,7 @@ def choose_visualization(
             )
         }
 
-    # ---------------------------------------------------------
     # Compliance
-    # ---------------------------------------------------------
 
     if intent_type == "compliance":
 
@@ -94,9 +88,7 @@ def choose_visualization(
             )
         }
 
-    # ---------------------------------------------------------
     # Multiple parameters
-    # ---------------------------------------------------------
 
     if len(parameters) > 1:
 
@@ -108,9 +100,7 @@ def choose_visualization(
             )
         }
 
-    # ---------------------------------------------------------
     # Single KPI
-    # ---------------------------------------------------------
 
     return {
         "type": "kpi",
@@ -126,7 +116,7 @@ def build_visualization_plan(
     parameters,
 ):
     """
-    Create a dashboard-level visualization plan.
+    Create a dashboard level visualization plan.
     """
 
     visualization = choose_visualization(

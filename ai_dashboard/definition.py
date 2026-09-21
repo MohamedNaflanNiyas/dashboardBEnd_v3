@@ -37,10 +37,7 @@ def build_component(
         "title": str(title),
     }
 
-    # ------------------------------------------
     # Single parameter
-    # ------------------------------------------
-
     if parameter:
 
         parameter_id = parameter.get("id")
@@ -63,10 +60,8 @@ def build_component(
             "global_code": global_code
         }
 
-    # ------------------------------------------
+    
     # Multiple parameters
-    # ------------------------------------------
-
     if parameters:
 
         parameter_list = []
@@ -170,10 +165,7 @@ def build_final_dashboard(plan):
             "parameters"
         )
 
-        # ------------------------------------------
         # Single parameter
-        # ------------------------------------------
-
         if isinstance(
             parameter,
             dict
@@ -196,10 +188,7 @@ def build_final_dashboard(plan):
                 parameter=parameter,
             )
 
-        # ------------------------------------------
         # Multiple parameters
-        # ------------------------------------------
-
         elif isinstance(
             parameters,
             list

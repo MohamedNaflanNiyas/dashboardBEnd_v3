@@ -42,7 +42,7 @@ def tokenize(text):
     )
 
 
-def retrieve_parameters(query, top_k=25):
+def retrieve_parameters(query, top_k):
 
     parameters = (
         ParameterMetaData.objects
